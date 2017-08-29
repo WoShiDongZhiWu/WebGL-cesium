@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Use correct character set. -->
+  <meta charset="utf-8">
+  <!-- Tell IE to use the latest, best version. -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+  <title>添加billboards（标志之类）</title>
+  <script type="text/javascript" src="../Sandcastle-header.js"></script>
+  <script src="../Build/Cesium/Cesium.js"></script>
+  <style>
+      @import url(../Build/Cesium/Widgets/widgets.css);
+      html, body, #cesiumContainer {
+          width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
+      }
+  </style>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+  <script>
+    var viewer = new Cesium.Viewer('cesiumContainer' );
+    //添加billboard
+    viewer.entities.add({
+        //设置位置
+        position : Cesium.Cartesian3.fromDegrees(-75.59777, 40.03883),
+        billboard : {
+            //添加的标志，引用的照片
+            image : '../Apps/2017照片.jpg', // default: undefined
+            //设置隐藏或显示标志
+            show : true, // default
+            //设置标志偏离锚定点，但是只能设置二维平面坐标
+            pixelOffset : new Cesium.Cartesian2(0, -50), // default: (0, 0)
+            //设置标志偏离锚定点，当同一位置有多个标志或模型时，使用，从而避免遮挡
+            eyeOffset : new Cesium.Cartesian3(0.0, 0.0, 0.0), // default
+            //设置标志与锚定点的相对位置
+            horizontalOrigin : Cesium.HorizontalOrigin.CENTER, // default
+            verticalOrigin : Cesium.VerticalOrigin.BOTTOM, // default: CENTER
+            //按倍数控制标志的大小
+            scale : 2.0,                     // default: 1.0
+            //设置标志的颜色，默认为原始颜色，在这里可以设置透明度，两种方法
+            //color : Cesium.Color.LIME,     // default: WHITE
+            //第二种方法，最后一个分量可以设置透明度
+            color : Cesium.Color(1.0,1.0,1.0,0.5),
+            //设置标志的旋转角度 
+            rotation : Cesium.Math.PI_OVER_FOUR, // default: 0.0
+            //设置标志的向上的矢量对齐的方向，默认为与屏幕的向上方向一致
+            alignedAxis : Cesium.Cartesian3.ZERO, 
+            //设置标志的长和宽
+            width : 25, // default: undefined
+            height : 50 // default: undefined
+        }
+    })
+
+  </script>
+</body>
+</html>
