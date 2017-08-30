@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Use correct character set. -->
+  <meta charset="utf-8">
+  <!-- Tell IE to use the latest, best version. -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+  <title>callback回调</title>
+  <script type="text/javascript" src="../Sandcastle-header.js"></script>
+  <script src="../Build/Cesium/Cesium.js"></script>
+  <style>
+      @import url(../Build/Cesium/Widgets/widgets.css);
+      html, body, #cesiumContainer {
+          width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
+      }
+  </style>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+  <script>
+
+var viewer = new Cesium.Viewer('cesiumContainer');
+
+var startLatitude = 35;
+var startLongitude = -120;
+var endLongitude;
+//获取系统当前的天文时间
+var startTime = Cesium.JulianDate.now();
+//console.log("startTime : "+startTime)
+
+// 如果每次callback返回相同的结果，则为true；若每次返回的结果不同，为false
+var isConstant = false;
+//增加一个polyine，动态获取
+var redLine =  viewer.entities.add({
+    polyline : {
+        // 这个callback每次返回一个位置
+        positions : new Cesium.CallbackProperty(function(time, result) {
+            //通过时间差计算坐标
+            endLongitude = startLongitude + 0.001 * Cesium.JulianDate.secondsDifference(time, startTime);
+            //返回一组坐标
+            return Cesium.Cartesian3.fromDegreesArray([startLongitude, startLatitude, endLongitude, startLatitude], Cesium.Ellipsoid.WGS84, result);
+        }, isConstant),
+        width : 5,
+        material : Cesium.Color.RED
+    }
+});
+
+var startCartographic = Cesium.Cartographic.fromDegrees(startLongitude, startLatitude);
+
+// 
+var endCartographic = new Cesium.Cartographic();
+var scratch = new Cesium.Cartographic();
+var geodesic = new Cesium.EllipsoidGeodesic();
+
+// 计算长度
+function getLength(time, result) {
+    // 获取当前的末端位置，点
+    var endPoint = redLine.polyline.positions.getValue(time, result)[1];
+    // 将笛卡尔坐标的点转换为地图表示的graphic
+    endCartographic = Cesium.Cartographic.fromCartesian(endPoint);
+    // 设置大地线
+    geodesic.setEndPoints(startCartographic, endCartographic);
+    // 用设置好的geodesic获取两点之间的球面距离
+    var lengthInMeters = Math.round(geodesic.surfaceDistance);
+    // 返回长度值，并四舍五入为1位小数
+    return (lengthInMeters / 1000).toFixed(1) + " km";
+}
+
+// 获取polyine的中间的位置坐标
+function getMidpoint(time, result) {
+    // 
+    var endPoint = redLine.polyline.positions.getValue(time, result)[1];
+    endCartographic = Cesium.Cartographic.fromCartesian(endPoint);
+
+    geodesic.setEndPoints(startCartographic, endCartographic);
+    // 设置标志点的位置，0.5表示中间，scratch用来存储结果
+    var midpointCartographic = geodesic.interpolateUsingFraction(0.5, scratch);
+    return Cesium.Cartesian3.fromRadians(midpointCartographic.longitude, midpointCartographic.latitude);
+}
+
+// 设置标签
+var label = viewer.entities.add({
+    //
+    position : new Cesium.CallbackProperty(getMidpoint, isConstant),
+    label : {
+        //
+        text: new Cesium.CallbackProperty(getLength, isConstant),
+        font : '20px sans-serif',
+        pixelOffset : new Cesium.Cartesian2(0.0, 20)
+    }
+});
+
+// view绑定到label上
+viewer.trackedEntity = label;
+  </script>
+</body>
+</html>
