@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>烟花</title>
+    <script type="text/javascript" src="../Sandcastle-header.js"></script>
+    <script src="../Build/Cesium/Cesium.js"></script>
+    <style>
+        @import url(../Build/Cesium/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="cesiumContainer"></div>
+    <script>
+        function startup(Cesium) {
+            'use strict';
+            //
+            var viewer = new Cesium.Viewer('cesiumContainer');
+            //
+            var scene = viewer.scene;
+            /**
+            调试时用来显示fps和MS
+            /*fps：单位时间内画面刷新的次数，次/秒，越高越好
+            /*ms：毫秒，即ping，发出指令到响应指令需要的时间，越低越好
+            **/        
+            scene.debugShowFramesPerSecond = true;
+            //设置随机seed
+            //Cesium.Math.setRandomNumberSeed(315);
+            //坐标变换
+            var modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(Cesium.Cartesian3.fromDegrees(-75.59777, 40.03883));
+
+            var emitterInitialLocation = new Cesium.Cartesian3(0.0, 0.0, 100.0);
+
+            var particleCanvas;
+
+            function getImage() {
+                if (!Cesium.defined(particleCanvas)) {
+                    particleCanvas = document.createElement('canvas');
+                    particleCanvas.width = 20;
+                    particleCanvas.height = 20;
+                    //getContext（）返回一个用于在画布上绘图的环境，2维环境，当前只支持2d
+                    var context2D = particleCanvas.getContext('2d');
+                    context2D.beginPath();
+                    context2D.arc(8, 8, 8, 0, Cesium.Math.TWO_PI, true);
+                    context2D.closePath();
+                    context2D.fillStyle = 'rgb(255, 255, 255)';
+                    context2D.fill();
+                    //
+                }
+                return particleCanvas;
+            }
+
+            var minimumExplosionSize = 30.0;
+            var maximumExplosionSize = 100.0;
+            var particlePixelSize = 7.0;
+            var burstSize = 400.0;
+            var lifetime = 10.0;
+            var numberOfFireworks = 20.0;
+
+            var emitterModelMatrixScratch = new Cesium.Matrix4();
+
+            function createFirework(offset, color, bursts) {
+                //
+                var position = Cesium.Cartesian3.add(emitterInitialLocation, offset, new Cesium.Cartesian3());
+                
+                var emitterModelMatrix = Cesium.Matrix4.fromTranslation(position, emitterModelMatrixScratch);
+                
+                var particleToWorld = Cesium.Matrix4.multiply(modelMatrix, emitterModelMatrix, new Cesium.Matrix4());
+
+                var worldToParticle = Cesium.Matrix4.inverseTransformation(particleToWorld, particleToWorld);
+
+                var size = Cesium.Math.randomBetween(minimumExplosionSize, maximumExplosionSize);
+               
+                var particlePositionScratch = new Cesium.Cartesian3();
+
+                var force = function (particle) {
+                    var position = Cesium.Matrix4.multiplyByPoint(worldToParticle, particle.position, particlePositionScratch);
+                    if (Cesium.Cartesian3.magnitudeSquared(position) >= size * size) {
+                        Cesium.Cartesian3.clone(Cesium.Cartesian3.ZERO, particle.velocity);
+                    }
+                };
+
+                var normalSize = (size - minimumExplosionSize) / (maximumExplosionSize - minimumExplosionSize);
+                var minLife = 0.3;
+                var maxLife = 1.0;
+                var life = normalSize * (maxLife - minLife) + minLife;
+                //加载geometry到scene中
+                scene.primitives.add(new Cesium.ParticleSystem({//管理粒子集合的更新和显示
+                    // 设置用于billboard的canvas
+                    image: getImage(),
+                    // 粒子出现时的颜色
+                    startColor: color,
+                    // 粒子消亡时的颜色，赋予新的alpha值
+                    endColor: color.withAlpha(0.0),
+                    // 短时间内粒子的最大寿命和最小寿命
+                    life: life,
+                    // m/s
+                    speed: 100.0,
+                    // 粒子的像素大小
+                    width: particlePixelSize,
+                    height: particlePixelSize,
+                    // 每秒的粒子数
+                    rate: 0,
+                    // 定义粒子发射器，球体粒子发射器
+                    emitter: new Cesium.SphereEmitter(0.1),
+                    // 周期性时间内，粒子爆发
+                    bursts: bursts,
+                    // 粒子系统发射完粒子的时间
+                    lifeTime: lifetime,
+                    // 一组强制回调，
+                    forces: [force],
+                    // 将粒子系统转换为世界坐标
+                    modelMatrix: modelMatrix,
+                    // 在局部坐标系中变换粒子发射器的矩阵
+                    emitterModelMatrix: emitterModelMatrix
+                }));
+            }
+
+            var xMin = -100.0;
+            var xMax = 100.0;
+            var yMin = -80.0;
+            var yMax = 100.0;
+            var zMin = -50.0;
+            var zMax = 50.0;
+
+            var colorOptions = [{
+                minimumRed: 0.75,
+                green: 0.0,
+                minimumBlue: 0.8,
+                alpha: 1.0
+            }, {
+                red: 0.0,
+                minimumGreen: 0.75,
+                minimumBlue: 0.8,
+                alpha: 1.0
+            }, {
+                red: 0.0,
+                green: 0.0,
+                minimumBlue: 0.8,
+                alpha: 1.0
+            }, {
+                minimumRed: 0.75,
+                minimumGreen: 0.75,
+                blue: 0.0,
+                alpha: 1.0
+            }];
+
+            for (var i = 0; i < numberOfFireworks; ++i) {
+                //
+                var x = Cesium.Math.randomBetween(xMin, xMax);
+                var y = Cesium.Math.randomBetween(yMin, yMax);
+                var z = Cesium.Math.randomBetween(zMin, zMax);
+                var offset = new Cesium.Cartesian3(x, y, z);
+                //创建随机颜色，为了reproducible random colors，需要在开始时设置随机种子
+                var color = Cesium.Color.fromRandom(colorOptions[i % colorOptions.length]);
+                //创建粒子爆炸效果
+                var bursts = [];
+                for (var j = 0; j < 3; ++j) {
+                    bursts.push(new Cesium.ParticleBurst({
+                        //时间，爆炸发生的间隔时间
+                        //Cesium.Math.nextRandomNumber()返回一个[0.0，1]之间的浮点数
+                        time: Cesium.Math.nextRandomNumber() * lifetime,
+                        //释放的最小粒子数
+                        minimum: burstSize,
+                        //释放的最大粒子数
+                        maximum: burstSize
+                    }));
+                }
+
+                createFirework(offset, color, bursts);
+            }
+
+            var camera = viewer.scene.camera;
+            var cameraOffset = new Cesium.Cartesian3(-300.0, 0.0, 0.0);
+            camera.lookAtTransform(modelMatrix, cameraOffset);
+            camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+
+            var toFireworks = Cesium.Cartesian3.subtract(emitterInitialLocation, cameraOffset, new Cesium.Cartesian3());
+            Cesium.Cartesian3.normalize(toFireworks, toFireworks);
+            var angle = Cesium.Math.PI_OVER_TWO - Math.acos(Cesium.Cartesian3.dot(toFireworks, Cesium.Cartesian3.UNIT_Z));
+            camera.lookUp(angle);
+
+            //Sandcastle_End
+            Sandcastle.finishedLoading();
+        }
+        if (typeof Cesium !== "undefined") {
+            startup(Cesium);
+        } else if (typeof require === "function") {
+            require(["Cesium"], startup);
+        }
+    </script>
+</body>
+
+</html>
