@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Use correct character set. -->
+  <meta charset="utf-8">
+  <!-- Tell IE to use the latest, best version. -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+  <title>Hello World!</title>
+  <script src="../Build/CesiumUnminified/Cesium.js"></script>
+  <style>
+      @import url(../Build/Cesium/Widgets/widgets.css);
+      html, body, #cesiumContainer {
+          width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
+      }
+	  #EL{
+	  <!-- width:50%; -->
+	  <!-- height: 100%; -->
+	   <!-- float:left; -->
+	  }
+	  #ER{
+	  width:50%;
+	  height: 100%;
+	  background-color:yellow;
+	  float:left;
+	  }
+  </style>
+</head>
+<body>
+  <div id="cesiumContainer">
+  
+  <canvas  id="EL" width="683px"height="1200px"> </canvas>
+  <div  id="ER"  ></div >
+  
+  </div >
+  <script>
+   let view = new Cesium.Viewer('ER',{
+     animation:false,
+     timeline:false,
+     //vrButton: true    
+   });
+   //隐藏标志
+   view._cesiumWidget._creditContainer.style.display = "none";
+   let scene = view.scene;
+   //起始位置
+   let position = Cesium.Cartesian3.fromDegrees(116.080591,39.919141,0);
+   //设置小车方向
+   let hpRoll = new Cesium.HeadingPitchRoll();
+   let fixedFrameTransforms = Cesium.Transforms.localFrameToFixedFrameGenerator('north','west');
+   //添加模型
+   let carPrimitive = scene.primitives.add(Cesium.Model.fromGltf({
+     url : '../Apps/SampleData/models/CesiumMilkTruck/CesiumMilkTruck-kmc.glb',
+     modelMatrix: Cesium.Transforms.headingPitchRollToFixedFrame(position,hpRoll,Cesium.Ellipsoid.WGS84,fixedFrameTransforms),
+     minimumPixelSize:128
+   }));
+   <!-- //小车状态标识 -->
+   <!-- let flag = { -->
+     <!-- moveUp:false, -->
+     <!-- moveDown:false, -->
+     <!-- moveLeft:false, -->
+     <!-- moveRight:false -->
+   <!-- }; -->
+   <!-- //根据键盘按键返回标志 -->
+   <!-- function setFlagStatus(key,value) { -->
+      <!-- switch (key.keyCode){ -->
+        <!-- case 37: -->
+          <!-- //左 -->
+          <!-- flag.moveLeft = value; -->
+          <!-- break; -->
+        <!-- case 38: -->
+          <!-- //上 -->
+          <!-- flag.moveUp = value; -->
+          <!-- break; -->
+        <!-- case 39: -->
+          <!-- //右 -->
+          <!-- flag.moveRight = value; -->
+          <!-- break; -->
+        <!-- case 40: -->
+          <!-- //下 -->
+          <!-- flag.moveDown = value; -->
+          <!-- break; -->
+      <!-- } -->
+   <!-- } -->
+   <!-- document.addEventListener('keydown',(e)=>{ -->
+      <!-- setFlagStatus(e,true); -->
+   <!-- }); -->
+   <!-- document.addEventListener('keyup',(e)=>{ -->
+      <!-- setFlagStatus(e,false); -->
+   <!-- }); -->
+   <!-- //监听帧 -->
+   <!-- view.clock.onloopVR.addEventListener((clock)=>{ -->
+      <!-- if(flag.moveUp){ -->
+          <!-- if(flag.moveLeft){ -->
+              <!-- hpRoll.heading -= radian; -->
+          <!-- } -->
+
+          <!-- if(flag.moveRight){ -->
+            <!-- hpRoll.heading += radian; -->
+          <!-- } -->
+          <!-- moveCar(true); -->
+      <!-- } -->
+
+      <!-- if(flag.moveDown) { -->
+          <!-- if(flag.moveLeft) { -->
+              <!-- hpRoll.heading -= radian; -->
+          <!-- } -->
+
+          <!-- if(flag.moveRight) { -->
+              <!-- hpRoll.heading += radian; -->
+          <!-- } -->
+          <!-- moveCar(false); -->
+      <!-- } -->
+   <!-- }); -->
+   <!-- //移动小车 -->
+   <!-- function moveCar(isUP) { -->
+      <!-- //计算速度矩阵 -->
+      <!-- if(isUP>0){ -->
+          <!-- speedVector = Cesium.Cartesian3.multiplyByScalar(Cesium.Cartesian3.UNIT_X,speed,speedVector); -->
+      <!-- }else{ -->
+          <!-- speedVector = Cesium.Cartesian3.multiplyByScalar(Cesium.Cartesian3.UNIT_X,-speed,speedVector); -->
+      <!-- } -->
+      <!-- //根据速度计算出下一个位置的坐标 -->
+      <!-- position = Cesium.Matrix4.multiplyByPoint(carPrimitive.modelMatrix,speedVector,position); -->
+      <!-- //小车移动 -->
+      <!-- Cesium.Transforms.headingPitchRollToFixedFrame(position,hpRoll,Cesium.Ellipsoid.WGS84,fixedFrameTransforms,carPrimitive.modelMatrix); -->
+   <!-- } -->
+	var camera = scene.camera;
+	loopVR();
+	//VR模式函数
+	function loopVR() {
+	//设置视锥体
+	var width=document.getElementById("EL").clientWidth;
+	var height=document.getElementById("EL").clientWidth;
+	camera.frustum.aspectRatio = width*2 / height;
+	//设置相机参数
+	var OCam = Cesium.Camera.clone(camera);
+	var VRCam = Cesium.Camera.clone(camera);
+	//变换视角
+	var translation = 0.0;	
+    var near = VRCam.frustum.near;
+    var fo = near * 5.0;
+    var eyeSeparation = fo / 30.0;
+	//视差随距离变化，但是相对于屏幕不变
+	//方法1，利用pitch和height模拟到相机视野中心的距离（球体表面）
+    var height = Math.abs(VRCam.positionCartographic.height)+20;
+	var pitch = (Math.abs(VRCam.pitch)+Math.PI/4)/2;
+	var scaleByDis = height/Math.cos(Math.cos(Math.PI/2-pitch/2))*3;
+	translation = eyeSeparation * 0.5 * scaleByDis;
+	//方法2，利用相机到球体中心的距离
+    //translation = eyeSeparation * 0.5 * VRCam.getMagnitude();
+	
+	var inRight = Cesium.Cartesian3.clone(VRCam.right);
+    Cesium.Cartesian3.multiplyByScalar(inRight, translation, inRight);
+    Cesium.Cartesian3.add(VRCam.position, inRight, VRCam.position);
+	//渲染
+	scene.camera.position = VRCam.position;
+	view.render();
+	var ER = scene.canvas;
+	var EL=document.getElementById('EL');
+	EL.getContext('2d').drawImage(ER,0,0);
+	//渲染
+	scene.camera.position =OCam.position;
+	view.render();
+	//
+	Cesium.requestAnimationFrame(loopVR);
+	};
+
+  </script>
+</body>
+</html>
